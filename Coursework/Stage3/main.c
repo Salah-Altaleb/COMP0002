@@ -54,29 +54,44 @@ int main(void) {
     // Main loop: update foreground only
     dfs_find_marker(&robot, delay_ms);
 
-    // Navigate to corner
-    while (!atCorner(&robot)) {
-        if (canMoveForward(&robot)) forward(&robot);
-        else right(&robot);
-        render_state(&robot, delay_ms);
-    }
+    // If the robot is carrying a marker
+    if (markerCount(&robot) > 0) {
+        // Case 1: Robot found the marker at a corner → go to another corner
+        if (atCorner(&robot)) {
+            printf("Found marker at a corner — moving to another corner...\n");
 
-    // Drop marker only if robot has moved since pickup
-    if (markerCount(&robot) > 0 && robot.hasMovedSincePickup && atCorner(&robot)) {
-        dropMarker(&robot);
-        render_state(&robot, delay_ms);
-    }
+            // Try to move to any other corner
+            while (atCorner(&robot)) {
+                // Move forward if possible, else rotate until possible
+                if (canMoveForward(&robot)) forward(&robot);
+                else right(&robot);
+                render_state(&robot, delay_ms);
+            }
 
-    // If marker was originally in a corner, move to another corner first
-    else if (markerCount(&robot) > 0 && !robot.hasMovedSincePickup) {
-        // For simplicity, move to top-right corner
-        while (!(robot.col == robot.maze->cols - 2 && robot.row == 1)) {
-            if (canMoveForward(&robot)) forward(&robot);
-            else right(&robot);
+            // Continue moving until we reach a new corner
+            while (!atCorner(&robot)) {
+                if (canMoveForward(&robot)) forward(&robot);
+                else right(&robot);
+                render_state(&robot, delay_ms);
+            }
+
+            dropMarker(&robot);
             render_state(&robot, delay_ms);
         }
-        dropMarker(&robot);
-        render_state(&robot, delay_ms);
+
+        // Case 2: Robot found the marker somewhere in the maze → go to a corner
+        else {
+            printf("Found marker in the maze — moving to nearest corner...\n");
+
+            while (!atCorner(&robot)) {
+                if (canMoveForward(&robot)) forward(&robot);
+                else right(&robot);
+                render_state(&robot, delay_ms);
+            }
+
+            dropMarker(&robot);
+            render_state(&robot, delay_ms);
+        }
     }
 
     sleep(delay_ms * 5);
